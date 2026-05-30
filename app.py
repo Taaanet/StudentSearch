@@ -1,201 +1,72 @@
-from flask import Flask, request, render_template_string
+from flask import Flask, render_template, request, redirect, session
 import pandas as pd
-import os
 
 app = Flask(__name__)
+app.secret_key = "secret123"
 
-# 📁 Excel file
-EXCEL_FILE = "students.xlsx"
-df = pd.read_excel(EXCEL_FILE)
+FILE = "students.xlsx"
 
-# 🧠 تجهيز بيانات رقمية
-df["MARK"] = pd.to_numeric(df["MARK"], errors="coerce")
+def load_data():
+    return pd.read_excel(FILE)
 
-# 📊 إحصائيات
-total_students = len(df)
-avg_mark = round(df["MARK"].mean(), 2)
+# 🏠 الصفحة الرئيسية
+@app.route("/")
+def home():
+    return render_template("index.html")
 
-top_student = df.loc[df["MARK"].idxmax()] if not df.empty else None
+# 🔍 البحث عن طالب (مادة واحدة فقط)
+@app.route("/search", methods=["POST"])
+def search():
+    student_id = request.form["id"]
+    subject = request.form["subject"]
 
-HTML = """
-<!DOCTYPE html>
-<html>
-<head>
-    <title>School Dashboard</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    df = load_data()
 
-    <style>
-        body {
-            font-family: Arial;
-            background: #f4f7fc;
-            margin: 0;
-        }
+    student = df[(df["ID"].astype(str) == str(student_id)) &
+                 (df["SUBJECT"] == subject)]
 
-        .container {
-            max-width: 1100px;
-            margin: auto;
-            padding: 20px;
-        }
+    if student.empty:
+        return render_template("index.html", error="لا توجد بيانات")
 
-        h1 {
-            text-align: center;
-            color: #2c3e50;
-        }
+    info = student.iloc[0].to_dict()
 
-        .cards {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin-top: 20px;
-        }
+    # 📊 بيانات الرسم (حسب الأسبوع)
+    chart_data = student.sort_values("WEEK")
 
-        .card {
-            background: white;
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-            text-align: center;
-        }
+    labels = chart_data["WEEK"].astype(str).tolist()
+    values = chart_data["MARK"].tolist()
 
-        .card h2 {
-            margin: 0;
-            color: #3498db;
-        }
+    return render_template("result.html",
+                           student=info,
+                           labels=labels,
+                           values=values)
 
-        .search-box {
-            margin: 20px 0;
-        }
+# 🔐 تسجيل دخول الأدمن
+@app.route("/admin-login", methods=["POST"])
+def admin_login():
+    password = request.form["password"]
 
-        input {
-            width: 100%;
-            padding: 12px;
-            border-radius: 10px;
-            border: 1px solid #ccc;
-        }
+    if password == "admin":
+        session["admin"] = True
+        return redirect("/admin")
 
-        button {
-            width: 100%;
-            padding: 12px;
-            margin-top: 10px;
-            background: #3498db;
-            color: white;
-            border: none;
-            border-radius: 10px;
-        }
+    return render_template("index.html", error="كلمة المرور خطأ")
 
-        table {
-            width: 100%;
-            margin-top: 20px;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-        }
+# 📊 لوحة الأدمن
+@app.route("/admin")
+def admin():
+    if not session.get("admin"):
+        return redirect("/")
 
-        th, td {
-            padding: 10px;
-            border-bottom: 1px solid #ddd;
-            text-align: center;
-        }
+    df = load_data()
+    return render_template("admin.html",
+                           tables=df.to_dict(orient="records"))
 
-        th {
-            background: #3498db;
-            color: white;
-        }
-
-    </style>
-</head>
-
-<body>
-
-<div class="container">
-
-    <h1>🏫 School Dashboard</h1>
-
-    <!-- 📊 Stats -->
-    <div class="cards">
-        <div class="card">
-            <h2>{{total}}</h2>
-            <p>👨‍🎓 Students</p>
-        </div>
-
-        <div class="card">
-            <h2>{{avg}}</h2>
-            <p>📊 Average Mark</p>
-        </div>
-
-        <div class="card">
-            <h2>{{top}}</h2>
-            <p>🏆 Top Student</p>
-        </div>
-    </div>
-
-    <!-- 🔍 Search -->
-    <div class="search-box">
-        <form method="post">
-            <input name="student_id" placeholder="Search by ID">
-            <button type="submit">Search</button>
-        </form>
-    </div>
-
-    {% if result %}
-        <div class="card">
-            {% if result.error %}
-                <p style="color:red">{{ result.error }}</p>
-            {% else %}
-                {% for k, v in result.items() %}
-                    <p><b>{{k}}</b>: {{v}}</p>
-                {% endfor %}
-            {% endif %}
-        </div>
-    {% endif %}
-
-    <!-- 📋 Table -->
-    <table>
-        <tr>
-            {% for col in columns %}
-                <th>{{col}}</th>
-            {% endfor %}
-        </tr>
-
-        {% for row in table_data %}
-        <tr>
-            {% for col in columns %}
-                <td>{{row[col]}}</td>
-            {% endfor %}
-        </tr>
-        {% endfor %}
-    </table>
-
-</div>
-
-</body>
-</html>
-"""
-
-@app.route("/", methods=["GET", "POST"])
-def dashboard():
-    result = None
-
-    if request.method == "POST":
-        student_id = request.form.get("student_id")
-        match = df[df["ID"].astype(str) == str(student_id)]
-
-        if not match.empty:
-            result = match.iloc[0].to_dict()
-        else:
-            result = {"error": "Student not found"}
-
-    return render_template_string(
-        HTML,
-        total=total_students,
-        avg=avg_mark,
-        top=top_student["NAME"] if top_student is not None else "N/A",
-        result=result,
-        columns=df.columns,
-        table_data=df.to_dict(orient="records")
-    )
+# 🚪 خروج
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/")
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(debug=True)

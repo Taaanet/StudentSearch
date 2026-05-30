@@ -1,0 +1,37 @@
+<h2>نتيجة الطالب: {{ student.NAME }}</h2>
+
+<p>المرحلة: {{ student.STAGE }}</p>
+<p>الفصل: {{ student.CLASS }}</p>
+<p>المادة: {{ student.SUBJECT }}</p>
+
+<hr>
+
+<h3>الدرجات حسب الأسبوع</h3>
+
+<ul>
+{% for w, m in zip(labels, values) %}
+  <li>Week {{ w }} : {{ m }}</li>
+{% endfor %}
+</ul>
+
+<canvas id="chart"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+const ctx = document.getElementById('chart');
+
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: {{ labels|tojson }},
+        datasets: [{
+            label: 'درجات الطالب',
+            data: {{ values|tojson }},
+            borderWidth: 2
+        }]
+    }
+});
+</script>
+
+<a href="/">رجوع</a>

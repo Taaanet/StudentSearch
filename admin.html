@@ -1,0 +1,23 @@
+<h2>لوحة الأدمن</h2>
+
+<a href="/logout">خروج</a>
+
+<table border="1">
+<tr>
+  <th>ID</th><th>NAME</th><th>CLASS</th><th>STAGE</th>
+  <th>SUBJECT</th><th>WEEK</th><th>MARK</th><th>TEACHER</th>
+</tr>
+
+{% for row in tables %}
+<tr>
+  <td>{{ row.ID }}</td>
+  <td>{{ row.NAME }}</td>
+  <td>{{ row.CLASS }}</td>
+  <td>{{ row.STAGE }}</td>
+  <td>{{ row.SUBJECT }}</td>
+  <td>{{ row.WEEK }}</td>
+  <td>{{ row.MARK }}</td>
+  <td>{{ row.TEACHER }}</td>
+</tr>
+{% endfor %}
+</table>
