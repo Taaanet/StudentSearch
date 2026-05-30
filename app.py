@@ -1,72 +1,70 @@
-from flask import Flask, render_template, request, redirect, session
+from flask import Flask, render_template, request
 import pandas as pd
+from utils.excel_reader import load_data
 
 app = Flask(__name__)
-app.secret_key = "secret123"
 
-FILE = "students.xlsx"
+# 📊 تحميل البيانات
+df = load_data("students.xlsx")
 
-def load_data():
-    return pd.read_excel(FILE)
 
-# 🏠 الصفحة الرئيسية
-@app.route("/")
-def home():
-    return render_template("index.html")
+# -----------------------
+# 🧑 صفحة الطالب
+# -----------------------
+@app.route("/", methods=["GET", "POST"])
+def student_search():
+    if request.method == "POST":
+        try:
+            student_id = int(request.form["id"])
 
-# 🔍 البحث عن طالب (مادة واحدة فقط)
-@app.route("/search", methods=["POST"])
-def search():
-    student_id = request.form["id"]
-    subject = request.form["subject"]
+            student_rows = df[df["ID"] == student_id]
 
-    df = load_data()
+            if student_rows.empty:
+                return render_template("login.html", error="❌ ID غير موجود")
 
-    student = df[(df["ID"].astype(str) == str(student_id)) &
-                 (df["SUBJECT"] == subject)]
+            subject = student_rows["SUBJECT"].iloc[0]
 
-    if student.empty:
-        return render_template("index.html", error="لا توجد بيانات")
+            filtered = df[
+                (df["ID"] == student_id) &
+                (df["SUBJECT"] == subject)
+            ]
 
-    info = student.iloc[0].to_dict()
+            return render_template(
+                "student.html",
+                name=filtered["NAME"].iloc[0],
+                class_name=filtered["CLASS"].iloc[0],
+                stage=filtered["STAGE"].iloc[0],
+                subject=subject,
+                table=filtered.to_dict(orient="records")
+            )
 
-    # 📊 بيانات الرسم (حسب الأسبوع)
-    chart_data = student.sort_values("WEEK")
+        except:
+            return render_template("login.html", error="⚠️ خطأ في الإدخال")
 
-    labels = chart_data["WEEK"].astype(str).tolist()
-    values = chart_data["MARK"].tolist()
+    return render_template("login.html")
 
-    return render_template("result.html",
-                           student=info,
-                           labels=labels,
-                           values=values)
 
-# 🔐 تسجيل دخول الأدمن
-@app.route("/admin-login", methods=["POST"])
-def admin_login():
-    password = request.form["password"]
-
-    if password == "admin":
-        session["admin"] = True
-        return redirect("/admin")
-
-    return render_template("index.html", error="كلمة المرور خطأ")
-
-# 📊 لوحة الأدمن
-@app.route("/admin")
+# -----------------------
+# 🔐 Admin Panel
+# -----------------------
+@app.route("/admin", methods=["GET", "POST"])
 def admin():
-    if not session.get("admin"):
-        return redirect("/")
+    if request.method == "POST":
+        password = request.form["password"]
 
-    df = load_data()
-    return render_template("admin.html",
-                           tables=df.to_dict(orient="records"))
+        if password == "admin":
+            return render_template(
+                "admin.html",
+                table=df.to_dict(orient="records")
+            )
+        else:
+            return render_template(
+                "admin.html",
+                error="❌ كلمة المرور غير صحيحة"
+            )
 
-# 🚪 خروج
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect("/")
+    return render_template("admin.html")
+
 
 if __name__ == "__main__":
     app.run(debug=True)
