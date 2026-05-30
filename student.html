@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Result</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<h2>👨‍🎓 {{ name }}</h2>
+<p>{{ class_name }} - {{ stage }}</p>
+<p>📘 المادة: {{ subject }}</p>
+
+<table border="1">
+    <tr>
+        <th>Week</th>
+        <th>Mark</th>
+        <th>Value</th>
+        <th>Notes</th>
+    </tr>
+
+    {% for row in table %}
+    <tr>
+        <td>{{ row.WEEK }}</td>
+        <td>{{ row.MARK }}</td>
+        <td>{{ row.VALUE }}</td>
+        <td>{{ row.NOTES }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<h3>📊 Chart</h3>
+<canvas id="chart"></canvas>
+
+<script>
+    const data = {{ table | tojson }};
+
+    const labels = data.map(x => x.WEEK);
+    const marks = data.map(x => x.MARK);
+
+    new Chart(document.getElementById("chart"), {
+        type: "line",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Marks",
+                data: marks,
+                borderColor: "blue",
+                fill: false
+            }]
+        }
+    });
+</script>
+
+</body>
+</html>

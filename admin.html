@@ -1,23 +1,52 @@
-<h2>لوحة الأدمن</h2>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Panel</title>
+</head>
+<body>
 
-<a href="/logout">خروج</a>
+<h2>🔐 Admin Panel</h2>
+
+<form method="POST">
+    <input type="password" name="password" placeholder="كلمة المرور">
+    <button type="submit">دخول</button>
+</form>
+
+<p style="color:red;">{{ error }}</p>
+
+{% if table %}
+<h3>📋 كل بيانات الطلاب</h3>
 
 <table border="1">
 <tr>
-  <th>ID</th><th>NAME</th><th>CLASS</th><th>STAGE</th>
-  <th>SUBJECT</th><th>WEEK</th><th>MARK</th><th>TEACHER</th>
+    <th>ID</th>
+    <th>Name</th>
+    <th>Class</th>
+    <th>Stage</th>
+    <th>Subject</th>
+    <th>Week</th>
+    <th>Mark</th>
+    <th>Value</th>
+    <th>Notes</th>
+    <th>Teacher</th>
 </tr>
 
-{% for row in tables %}
+{% for row in table %}
 <tr>
-  <td>{{ row.ID }}</td>
-  <td>{{ row.NAME }}</td>
-  <td>{{ row.CLASS }}</td>
-  <td>{{ row.STAGE }}</td>
-  <td>{{ row.SUBJECT }}</td>
-  <td>{{ row.WEEK }}</td>
-  <td>{{ row.MARK }}</td>
-  <td>{{ row.TEACHER }}</td>
+    <td>{{ row.ID }}</td>
+    <td>{{ row.NAME }}</td>
+    <td>{{ row.CLASS }}</td>
+    <td>{{ row.STAGE }}</td>
+    <td>{{ row.SUBJECT }}</td>
+    <td>{{ row.WEEK }}</td>
+    <td>{{ row.MARK }}</td>
+    <td>{{ row.VALUE }}</td>
+    <td>{{ row.NOTES }}</td>
+    <td>{{ row.TEACHER }}</td>
 </tr>
 {% endfor %}
 </table>
+{% endif %}
+
+</body>
+</html>
